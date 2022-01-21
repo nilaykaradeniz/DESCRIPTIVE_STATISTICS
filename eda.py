@@ -58,7 +58,7 @@ def file_access(refresh=False):
     if refresh:
         dataframe.to_pickle(os.getcwd()+"/pickle_dataset/"+ file_name +".pkl")
     return dataframe
-df=file_access(refresh=True).copy()
+#df=file_access(refresh=True).copy()
 #WORK_FILE.csv
 
 
@@ -71,8 +71,8 @@ def col_types(dataframe,  cat_th_ratio_upper=35,car_th_cat_th_lower=65, car_th_c
     num_cols = [col for col in dataframe.columns if ((dataframe[col].dtypes != "O" and col not in num_but_cat) or col in cat_but_car) and col not in typless_cols]
     cat_cols = [col for col in dataframe.columns if ((dataframe[col].dtypes == "O" and col not in cat_but_car) or col in num_but_cat) and col not in typless_cols]
 
-    print(f"Observations: {df.shape[0]}")
-    print(f"Variables: {df.shape[1]}")
+    print(f"Observations: {dataframe.shape[0]}")
+    print(f"Variables: {dataframe.shape[1]}")
     print(f'cat_cols: {len(cat_cols)}')
     print(f'num_cols: {len(num_cols)}')
     print(f'cat_but_car: {len(cat_but_car)}')
@@ -89,14 +89,14 @@ def col_types(dataframe,  cat_th_ratio_upper=35,car_th_cat_th_lower=65, car_th_c
             dataframe[col] = dataframe[col].str.replace(',', '').astype(float)
     dataframe[cat_cols]=dataframe[cat_cols].astype(str).replace('nan',np.nan)
     return cat_cols, num_cols, cat_but_car,typless_cols
-cat_cols, num_cols, cat_but_car,typless_cols =col_types(df)
+#cat_cols, num_cols, cat_but_car,typless_cols =col_types(df)
 
 
 
 ######################## DESCRIPTIVE STATISTICS FOR VARIABLES IN THE DATASET ########################
 def desc_statistics(dataframe,num_cols,cat_cols,head=True,count=5,shape=True,dtypes=True,
-                    describe_kat=True, quantile=True,null_control=True,
-                    all_null_count=True,refresh=False, plot_hist=False,plot_bar=False,null_ratio=45):
+                    describe_kat=False, quantile=False,null_control=True,
+                    high_null_count=True,na_rows=True,refresh=False, plot_hist=False,plot_bar=False,null_ratio=45):
     if head:
         print("DATAFRAME FIRST",count, "ROWS PREVIEW","\n",dataframe.head(count),"\n")
     if shape:
@@ -111,16 +111,28 @@ def desc_statistics(dataframe,num_cols,cat_cols,head=True,count=5,shape=True,dty
         null_data_ratio = pd.DataFrame(dataframe.isnull().sum() / dataframe.shape[0]).reset_index().rename(columns={'index': 'Column_Name', 0: 'Ratio'})
         null_data_ratio["Ratio"] = null_data_ratio["Ratio"].map(lambda x: "{:,.3f}".format(x))
         print("COLUMN-BASED MISSING VALUES AND RATIO:", "\n", null_data_count.merge(null_data_ratio,how="inner",on="Column_Name"), "\n")
-    if all_null_count:
+    na_col_name=[]
+    if na_rows:
+        na_col_name = [col for col in dataframe.columns if dataframe[col].isnull().sum() > 0]
+        for col in dataframe[na_col_name]:
+            print("Na Variable : ", col)
+            print(dataframe[dataframe[col].isnull()], "\n")
+    else:
+        print("Since you set the na_rows parameter to false, the na_col_name field will be empty.")
+    null_high_col_name={}
+    if high_null_count:
         print("TOTAL NUMBER OF MISSING VALUES AND RATIO:", dataframe.isnull().sum().sum())
         print("MISSING VALUES RATIO                    :", format(dataframe.isnull().sum().sum()/dataframe.shape[0],".3f"), "\n")
         null_columns={col:dataframe[col].isnull().sum().sum()/dataframe.shape[0]*100 for col in dataframe.columns if dataframe[col].isnull().sum().sum()/dataframe.shape[0]*100>=null_ratio}.items()
-        df_null_info=pd.DataFrame(null_columns, columns=["Variable", "Percent"]).sort_values(by="Percent", ascending=False)
-        if df_null_info["Variable"].nunique() == 0:
+        null_high_col=pd.DataFrame(null_columns, columns=["Variable", "Percent"]).sort_values(by="Percent", ascending=False)
+        null_high_col_name=null_high_col["Variable"].tolist()
+        if null_high_col["Variable"].nunique() == 0:
             print("THERE IS NO PROBLEM WITH THE FILL RATE IN THE DATASET...","\n")
         else:
             print("BELOW ARE THE VARIABLES WITH HIGHER THAN", str(null_ratio) + "% NULL-TO-VALUE RATIO")
-            print(df_null_info,"\n")
+            print(null_high_col,"\n")
+    else:
+        print("Since you set the high_null_count parameter to false, the null_high_col_name field will be empty.")
     if quantile:
         quantile = [0.05, 0.10, 0.20,0.25, 0.50, 0.75, 0.80, 0.90, 0.95]
         print("                  DESCRIPTIVE STATISTICS FOR NUMERICAL VARIABLES")
@@ -142,6 +154,6 @@ def desc_statistics(dataframe,num_cols,cat_cols,head=True,count=5,shape=True,dty
     if refresh:
         file_path = os.getcwd()
         dataframe.to_pickle(file_path+r'\pickle_descriptive\eda.pkl')
-    return df_null_info
-df_null_info=desc_statistics(df,num_cols,cat_cols,refresh=True)
+    return na_col_name,null_high_col_name
+#na_col,null_high_col_name=desc_statistics(df,num_cols,cat_cols,refresh=True)
 
